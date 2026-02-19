@@ -45,13 +45,17 @@ class FeedWorker:
             logger.warning("Feed fetch failed [%s]: %s", feed.url, parsed.get("bozo_exception", "unknown error"))
         entries = parsed.entries or []
         logger.info("Feed [%s]: %d entries fetched", feed.url, len(entries))
-        # Process oldest first so notifications stay in feed order.
-        for entry in entries[-10:]:
+        # Feeds are newest-first. Collect unseen entries, take up to 10 newest,
+        # then process oldest-first so notifications arrive in chronological order.
+        candidates: list[tuple[str, dict]] = []
+        for entry in entries:
             uid = str(entry.get("id") or entry.get("link") or entry.get("title") or "").strip()
             if not uid:
                 continue
             if self.db.seen_entry(feed.id, uid):
                 continue
+            candidates.append((uid, entry))
+        for uid, entry in reversed(candidates[:10]):
             sent = await self._handle_entry(entry)
             if sent:
                 self.db.mark_entry_seen(feed.id, uid)
