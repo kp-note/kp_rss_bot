@@ -41,7 +41,10 @@ class FeedWorker:
 
     async def _process_feed(self, feed: Feed) -> None:
         parsed = feedparser.parse(feed.url)
+        if parsed.bozo:
+            logger.warning("Feed fetch failed [%s]: %s", feed.url, parsed.get("bozo_exception", "unknown error"))
         entries = parsed.entries or []
+        logger.info("Feed [%s]: %d entries fetched", feed.url, len(entries))
         # Process oldest first so notifications stay in feed order.
         for entry in entries[-10:]:
             uid = str(entry.get("id") or entry.get("link") or entry.get("title") or "").strip()
@@ -49,15 +52,17 @@ class FeedWorker:
                 continue
             if self.db.seen_entry(feed.id, uid):
                 continue
-            await self._handle_entry(entry)
-            self.db.mark_entry_seen(feed.id, uid)
+            sent = await self._handle_entry(entry)
+            if sent:
+                self.db.mark_entry_seen(feed.id, uid)
 
-    async def _handle_entry(self, entry: dict) -> None:
+    async def _handle_entry(self, entry: dict) -> bool:
         title = str(entry.get("title") or "Untitled")
         link = str(entry.get("link") or "")
         if not link:
-            return
+            return False
 
+        logger.info("Processing entry: %s", title)
         html_doc = await asyncio.to_thread(fetch_html, link)
 
         if is_substack_url(link) and is_probably_paid_substack(title, link, html_doc):
@@ -66,19 +71,22 @@ class FeedWorker:
                 f"<b>{html.escape(title)}</b>\n{html.escape(link)}"
             )
             await self._send(text)
-            return
+            return True
 
         main_text = await asyncio.to_thread(extract_main_text, link, html_doc)
         if not main_text:
+            logger.warning("Failed to extract text from: %s", link)
             text = f"<b>{html.escape(title)}</b>\nFailed to extract article text. Link: {html.escape(link)}"
             await self._send(text)
-            return
+            return True
 
         summary = await asyncio.to_thread(self.summarizer.summarize_ko, title, link, main_text)
         if not summary:
-            return
+            logger.warning("Summarizer returned nothing for: %s", title)
+            return False
         msg = f"<b>{html.escape(title)}</b>\n{html.escape(link)}\n\n{html.escape(summary)}"
         await self._send(msg)
+        return True
 
     async def _send(self, text: str) -> None:
         max_len = 3900
