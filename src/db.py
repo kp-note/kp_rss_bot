@@ -108,6 +108,19 @@ class Database:
         ).fetchone()
         return row is not None
 
+    def ensure_feed(self, url: str) -> bool:
+        """Add feed if not already present. Returns True if newly added."""
+        cur = self.conn.cursor()
+        cur.execute("SELECT id FROM feeds WHERE url = ?", (url,))
+        if cur.fetchone():
+            return False
+        cur.execute(
+            "INSERT INTO feeds (url, paused, created_at) VALUES (?, 0, ?)",
+            (url, _utc_now_iso()),
+        )
+        self.conn.commit()
+        return True
+
     def mark_entry_seen(self, feed_id: int, entry_uid: str) -> None:
         cur = self.conn.cursor()
         cur.execute(

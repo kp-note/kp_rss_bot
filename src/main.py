@@ -20,6 +20,10 @@ def main() -> None:
     settings = load_settings()
     db = Database(settings.database_path)
 
+    for url in settings.seed_feed_urls:
+        if db.ensure_feed(url):
+            logging.getLogger(__name__).info("Seeded feed from SEED_FEEDS: %s", url)
+
     summarizer = Summarizer(
         SummaryConfig(
             provider=settings.default_summary_provider,

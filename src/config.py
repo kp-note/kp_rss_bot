@@ -21,6 +21,11 @@ class Settings:
     poll_interval_minutes: int
     quiet_start_hour: int
     quiet_end_hour: int
+    seed_feed_urls: list[str]
+
+
+def _parse_seed_feeds(raw: str) -> list[str]:
+    return [u.strip() for u in raw.split(",") if u.strip()]
 
 
 def _parse_admin_ids(raw: str) -> set[int]:
@@ -58,5 +63,6 @@ def load_settings() -> Settings:
         poll_interval_minutes=int(os.getenv("POLL_INTERVAL_MINUTES", "60")),
         quiet_start_hour=int(os.getenv("QUIET_START_HOUR", "23")),
         quiet_end_hour=int(os.getenv("QUIET_END_HOUR", "8")),
+        seed_feed_urls=_parse_seed_feeds(os.getenv("SEED_FEEDS", "")),
     )
 
