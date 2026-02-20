@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 
+import feedparser
 from telegram import Update
 from telegram.ext import Application, CallbackContext, CommandHandler
 
@@ -53,9 +55,26 @@ async def add_feed(update: Update, context: CallbackContext) -> None:
         await update.message.reply_text("사용법: /add <rss_or_atom_url>")
         return
     url = context.args[0].strip()
+
+    await update.message.reply_text("피드 확인 중...")
+    parsed = await asyncio.to_thread(feedparser.parse, url)
+    entry_count = len(parsed.entries)
+    feed_title = parsed.feed.get("title", "")
+
+    if not entry_count and not feed_title:
+        await update.message.reply_text(
+            f"❌ 유효한 RSS/Atom 피드를 찾을 수 없습니다.\n"
+            f"일반 웹페이지 URL 대신 피드 URL을 입력해주세요.\n"
+            f"예) https://example.com/feed 또는 https://example.com/rss"
+        )
+        return
+
     try:
         feed_id = db.add_feed(url)
-        await update.message.reply_text(f"추가 완료: id={feed_id}")
+        title_info = f" ({feed_title})" if feed_title else ""
+        await update.message.reply_text(
+            f"✅ 추가 완료{title_info}\nid={feed_id}, 항목 {entry_count}개 확인됨"
+        )
     except Exception as e:
         await update.message.reply_text(f"추가 실패: {e}")
 
