@@ -22,6 +22,7 @@ class Settings:
     quiet_start_hour: int
     quiet_end_hour: int
     seed_feed_urls: list[str]
+    lookback_hours: int
 
 
 def _parse_seed_feeds(raw: str) -> list[str]:
@@ -64,5 +65,6 @@ def load_settings() -> Settings:
         quiet_start_hour=int(os.getenv("QUIET_START_HOUR", "23")),
         quiet_end_hour=int(os.getenv("QUIET_END_HOUR", "8")),
         seed_feed_urls=_parse_seed_feeds(os.getenv("SEED_FEEDS", "")),
+        lookback_hours=int(os.getenv("LOOKBACK_HOURS", "48")),
     )
 

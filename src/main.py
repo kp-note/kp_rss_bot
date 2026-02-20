@@ -42,6 +42,7 @@ def main() -> None:
             channel_id=settings.telegram_channel_id,
             quiet_start_hour=settings.quiet_start_hour,
             quiet_end_hour=settings.quiet_end_hour,
+            lookback_hours=settings.lookback_hours,
         ),
     )
 
