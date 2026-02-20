@@ -70,11 +70,7 @@ class FeedWorker:
         html_doc = await asyncio.to_thread(fetch_html, link)
 
         if is_substack_url(link) and is_probably_paid_substack(title, link, html_doc):
-            text = (
-                "Paid or suspected-paid Substack post detected. Link only.\n\n"
-                f"<b>{html.escape(title)}</b>\n{html.escape(link)}"
-            )
-            await self._send(text)
+            logger.info("Skipping paid/suspected-paid Substack post: %s", title)
             return True
 
         main_text = await asyncio.to_thread(extract_main_text, link, html_doc)
