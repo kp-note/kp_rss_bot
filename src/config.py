@@ -42,7 +42,7 @@ def _parse_admin_ids(raw: str) -> set[int]:
 
 
 def load_settings() -> Settings:
-    load_dotenv()
+    load_dotenv(Path.home() / ".config/kp/.env")
 
     token = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
     channel = os.getenv("TELEGRAM_CHANNEL_ID", "").strip()
